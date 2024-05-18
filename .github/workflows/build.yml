@@ -16,3 +16,31 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.REPOTOKEN }}
+      - name: Anchore Container Scan
+        uses: anchore/scan-action@v3.6.4
+        with:
+          image: "juice-shop:${{github.sha}}"
+      - name: Anchore SBOM Action
+        uses: anchore/sbom-action@v0.15.11
+        with:
+          image: "juice-shop:${{github.sha}}"
+  SastScan:
+      name: semgrep
+      runs-on: ubuntu-20.04
+      container: returntocorp/semgrep
+      steps: 
+       - name: checkout
+         uses: actions/checkout@v2
+       - name: semgrep
+         run: semgrep ci --config=auto --sarif --output= semgrep.sarif || true
+       - name: Upload Sarif File
+         uses: github/codeql-action/upload-sarif@v2
+         with:
+           sarif_file: "semgrep.sarif"
+       - name: ZAP Full Scan
+         id: zap-scan
+         uses: zaproxy/action-full-scan@v0.10.0
+         with:
+           token: ${{ secrets.github_token }}
+           target: http://localhost:8080
+      
